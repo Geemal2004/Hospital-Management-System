@@ -1,4 +1,4 @@
-# Hospital Management System with C# 
+# Hospital Management System with C# Desktop Application
 
 ## Overview
 HMS-C#-An-Gr is a Hospital Management System built using C#. It provides functionalities to manage hospital operations such as patient records, appointments, staff management, and more.
