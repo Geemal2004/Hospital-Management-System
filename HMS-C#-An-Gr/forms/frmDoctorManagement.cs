@@ -382,5 +382,10 @@ namespace HMS_C__An_Gr.forms
         {
             ClearForm();
         }
+
+        private void dataGridViewDoctors_CellContentClick(object sender, DataGridViewCellEventArgs e)
+        {
+
+        }
     }
 }
