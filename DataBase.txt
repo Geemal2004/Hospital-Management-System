@@ -1,0 +1,88 @@
+
+CREATE TABLE Patients(
+PatientID INT PRIMARY KEY IDENTITY(1,1),
+FirstName NVARCHAR(30) NOT NULL,
+LastName NVARCHAR(30) NOT NULL,
+DateOfBirth DATE NOT NULL,
+Gender NVARCHAR(10) NOT NULL,
+ContactNumber NVARCHAR(15) NOT NULL,
+Address NVARCHAR(255),
+EmergencyContact NVARCHAR(15),
+BloodType NVARCHAR(5),
+CreatedDate DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE Users(
+UserID INT PRIMARY KEY IDENTITY(1,1),
+Username VARCHAR(50) NOT NULL,
+Password VARCHAR(100) NOT NULL,
+Role VARCHAR(50) NOT NULL
+);
+
+!! NOT IMPLEMENTED
+CREATE TABLE Roles (
+    RoleID INT IDENTITY(1,1) PRIMARY KEY,
+    RoleName VARCHAR(50) UNIQUE NOT NULL
+);
+!!
+
+CREATE TABLE Doctors (
+DoctorID INT PRIMARY KEY IDENTITY(1,1),
+UserID INT UNIQUE NOT NULL FOREIGN KEY REFERENCES Users(UserID),
+FirstName VARCHAR(50) NOT NULL,
+Last Name VARCHAR(50) NOT NULL,
+ContactNumber VARCHAR(15),
+Email VARCHAR(100) UNIQUE,
+Specialization VARCHAR(50) NOT NULL,
+LicenseNumber VARCHAR(50) UNIQUE NOT NULL,
+YearsOfExperience INT,
+ConsultationFEE Decimal(10,2),
+
+);
+
+CREATE TABLE DoctorAvailability (
+AvailabilityID INT PRIMARY KEY IDENTITY(1,1),
+DoctorID INT FOREIGN KEY REFERENCES Doctors(DoctorID),
+DayOfWeek VARCHAR(10) NOT NULL,
+StartTime TIME NOT NULL,
+EndTime TIME NOT NULL,
+CONSTRAINT CHK_ValidDay CHECK (DayOfWeek IN ('Monday','Tuesday','WednesDay','Thursday','Friday','Saturday','Sunday')),
+CONSTRAINT CHK_TimeRange CHECK (StartTime < EndTime)
+);
+
+CREATE TABLE DoctorQualifications (
+    QualificationID INT PRIMARY KEY IDENTITY(1,1),
+    DoctorID INT NOT NULL FOREIGN KEY REFERENCES Doctors(DoctorID),
+    QualificationName VARCHAR(100) NOT NULL, 
+    Institution VARCHAR(100) NOT NULL,      
+    YearObtained INT NOT NULL,
+    CONSTRAINT CHK_YearObtained CHECK (YearObtained <= YEAR(GETDATE()))
+);
+
+//Adding Cascading deletes so that deleting user will delete doctor details which will then delete DoctorAvailability and DoctorQualifications
+
+
+ALTER TABLE Doctors
+DROP CONSTRAINT FK_Doctors_Users;
+
+ALTER TABLE DoctorAvailability
+DROP CONSTRAINT FK_DoctorAvailability_Doctors;
+
+ALTER TABLE DoctorQualifications
+DROP CONSTRAINT FK_DoctorQualifications_Doctors;
+
+-- Add foreign key constraints with ON DELETE CASCADE
+ALTER TABLE Doctors
+ADD CONSTRAINT FK_Doctors_Users
+FOREIGN KEY (UserID) REFERENCES Users(UserID)
+ON DELETE CASCADE;
+
+ALTER TABLE DoctorAvailability
+ADD CONSTRAINT FK_DoctorAvailability_Doctors
+FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+ON DELETE CASCADE;
+
+ALTER TABLE DoctorQualifications
+ADD CONSTRAINT FK_DoctorQualifications_Doctors
+FOREIGN KEY (DoctorID) REFERENCES Doctors(DoctorID)
+ON DELETE CASCADE;

@@ -1,0 +1,148 @@
+I. Project Structure (Using Visual Studio)
+
+A good practice is to separate concerns using different projects within a single solution. This promotes maintainability and testability.
+
+Solution: HospitalManagementSystem.sln
+UI Project (Windows Forms): HospitalManagementSystem.UI
+Contains all your Forms (.cs and .designer.cs files) and the main entry point (Program.cs).
+Business Logic Layer (BLL) Project (Class Library): HospitalManagementSystem.BLL
+Contains classes that enforce business rules, perform calculations, and coordinate tasks between the UI and data access.
+Data Access Layer (DAL) Project (Class Library): HospitalManagementSystem.DAL
+Contains classes responsible only for interacting with the SQL Server database (reading and writing data).
+Entities/Common Project (Class Library): HospitalManagementSystem.Entities (or Common)
+Contains Plain Old CLR Objects (POCOs) representing your data structures (like Patient, Doctor, Appointment). These are used across all layers.
+II. Database (Microsoft SQL Server)
+
+You'll need a database with tables to store your information. Key tables might include:
+
+Patients: PatientID (PK), FirstName, LastName, DateOfBirth, Gender, Address, PhoneNumber, Email, RegistrationDate, etc.
+Doctors: DoctorID (PK), FirstName, LastName, Specialization, PhoneNumber, Email, RoomNumber, etc.
+Appointments: AppointmentID (PK), PatientID (FK), DoctorID (FK), AppointmentDate, AppointmentTime, Reason, Status (Scheduled, Completed, Cancelled), Notes, etc.
+Users: UserID (PK), Username, PasswordHash, FullName, RoleID (FK), IsActive, etc.
+Roles: RoleID (PK), RoleName (e.g., Admin, Doctor, Receptionist), etc.
+Wards / Rooms / Beds: WardID/RoomID/BedID (PK), Number, Type, IsOccupied, PatientID (FK, nullable)
+Departments: DepartmentID (PK), Name
+Bills: BillID (PK), PatientID (FK), BillDate, TotalAmount, PaidAmount, Status (Unpaid, Paid, Partially Paid)
+BillItems: BillItemID (PK), BillID (FK), ServiceDescription, Amount
+Prescriptions: PrescriptionID (PK), PatientID (FK), DoctorID (FK), PrescriptionDate
+PrescriptionItems: PrescriptionItemID (PK), PrescriptionID (FK), MedicineName, Dosage, Frequency, Duration
+(Maybe more depending on scope: LabTests, TestResults, Inventory, Staff, etc.)
+Recommendation: Use Stored Procedures in SQL Server for data operations (CRUD - Create, Read, Update, Delete) called by your DAL. This improves security and performance.
+
+III. Files, Classes, and Functions Breakdown
+
+A. Entities Project (HospitalManagementSystem.Entities)
+
+Files: Patient.cs, Doctor.cs, Appointment.cs, User.cs, Role.cs, Bill.cs, Prescription.cs, etc.
+Classes: Simple classes with properties matching your database table columns.
+public class Patient { public int PatientID { get; set; } public string FirstName { get; set; } ... }
+public class Doctor { public int DoctorID { get; set; } public string FirstName { get; set; } public string Specialization { get; set; } ... }
+(Similarly for other entities)
+B. Data Access Layer (DAL) Project (HospitalManagementSystem.DAL)
+
+Files: DatabaseHelper.cs (Optional but useful), PatientRepository.cs, DoctorRepository.cs, AppointmentRepository.cs, UserRepository.cs, etc.
+Classes & Functions:
+DatabaseHelper.cs (Optional):
+GetConnection(): Function to create and return an open SqlConnection. Manages connection strings.
+ExecuteNonQuery(string query, SqlParameter[] parameters): Executes INSERT, UPDATE, DELETE statements or Stored Procedures without returning data.
+ExecuteReader(string query, SqlParameter[] parameters): Executes SELECT statements or Stored Procedures and returns a SqlDataReader.
+ExecuteScalar(string query, SqlParameter[] parameters): Executes a query and returns the first column of the first row.
+PatientRepository.cs:
+AddPatient(Patient patient): Inserts a new patient record into the Patients table (likely calls a Stored Procedure).
+GetPatientById(int patientId): Retrieves a Patient object by ID.
+GetAllPatients(): Retrieves a List<Patient>.
+UpdatePatient(Patient patient): Updates an existing patient record.
+DeletePatient(int patientId): Deletes a patient record (or marks as inactive).
+SearchPatients(string searchTerm): Retrieves patients matching search criteria.
+DoctorRepository.cs: Similar CRUD and search functions for Doctors.
+AppointmentRepository.cs:
+AddAppointment(Appointment appointment)
+GetAppointmentById(int appointmentId)
+GetAppointmentsByPatient(int patientId)
+GetAppointmentsByDoctor(int doctorId, DateTime date)
+UpdateAppointment(Appointment appointment)
+CancelAppointment(int appointmentId)
+UserRepository.cs:
+ValidateUser(string username, string password): Checks credentials against the database (compare password hash). Returns User object or null/boolean.
+GetUserById(int userId)
+GetUserByUsername(string username)
+(Maybe functions for managing users if needed)
+(Repositories for other entities like Bills, Prescriptions, etc., following the same pattern)
+C. Business Logic Layer (BLL) Project (HospitalManagementSystem.BLL)
+
+Files: PatientService.cs, DoctorService.cs, AppointmentService.cs, UserService.cs, BillingService.cs, etc.
+Classes & Functions: These classes orchestrate operations, apply rules, and call the DAL.
+PatientService.cs:
+RegisterPatient(Patient patient): Performs validation (e.g., required fields, data formats), then calls PatientRepository.AddPatient(). May generate patient ID logic if not done by DB. Returns success/failure status or the newly created patient object.
+UpdatePatientInfo(Patient patient): Validates data, then calls PatientRepository.UpdatePatient().
+FindPatients(string searchTerm): Calls PatientRepository.SearchPatients(). May format results.
+GetPatientDetails(int patientId): Calls PatientRepository.GetPatientById().
+DoctorService.cs: Similar service methods for doctors.
+AppointmentService.cs:
+ScheduleAppointment(Appointment appointment): Checks for doctor availability (might need a GetDoctorSchedule method in DoctorRepository), validates patient/doctor existence, checks for conflicts, then calls AppointmentRepository.AddAppointment().
+CancelUserAppointment(int appointmentId, int userId): Checks if the user has permission to cancel, then calls AppointmentRepository.CancelAppointment().
+GetUpcomingAppointments(int patientId): Retrieves future appointments for a patient.
+GetDoctorSchedule(int doctorId, DateTime date): Retrieves appointments for a specific doctor on a given day.
+UserService.cs:
+AuthenticateUser(string username, string password): Calls UserRepository.ValidateUser(). Might handle password hashing/comparison logic here or delegate entirely to DAL/DB. Returns a User object or relevant status.
+GetUserPermissions(int userId): Determines what actions a user can perform based on their role.
+BillingService.cs:
+GeneratePatientBill(int patientId, List<BillItem> items): Creates a bill record, adds items, calculates total, calls respective DAL methods (BillRepository.AddBill, BillRepository.AddBillItem).
+RecordPayment(int billId, decimal amountPaid): Updates bill status and paid amount.
+(Services for other modules)
+D. UI Project (HospitalManagementSystem.UI)
+
+Files:
+Program.cs: Entry point. Usually initializes and runs the main form (often the Login form).
+App.config: Stores configuration like the database connection string.
+Forms/ (Recommended subfolder):
+frmLogin.cs / .designer.cs: Login screen (Username, Password fields, Login button).
+frmMainDashboard.cs / .designer.cs: Main application window after login. Might contain menus, buttons, or panels to access different modules.
+frmPatientRegistration.cs / .designer.cs: Form for adding/editing patient details.
+frmPatientSearch.cs / .designer.cs: Form to search for patients, often displaying results in a DataGridView.
+frmDoctorManagement.cs / .designer.cs: Add/Edit/View Doctors.
+frmAppointmentScheduling.cs / .designer.cs: Form to view schedule and book appointments (might use calendars, dropdowns).
+frmBilling.cs / .designer.cs: Form for creating and managing patient bills.
+(Forms for other modules: Users, Wards, Reports, etc.)
+Classes (Form Code-Behind) & Functions (Event Handlers):
+frmLogin.cs:
+btnLogin_Click(object sender, EventArgs e):
+Get username/password from text boxes.
+Instantiate UserService.
+Call userService.AuthenticateUser(username, password).
+If successful, hide login form, show frmMainDashboard, potentially passing user info.
+If failed, show an error message.
+frmPatientRegistration.cs:
+btnSave_Click(object sender, EventArgs e):
+Gather data from form controls (TextBoxes, DateTimePicker, ComboBoxes).
+Perform basic UI validation (e.g., check if required fields are empty).
+Create a Patient entity object.
+Instantiate PatientService.
+Call patientService.RegisterPatient(newPatient) (or UpdatePatientInfo if editing).
+Show success/error message. Clear form on success.
+LoadPatientData(int patientId) (if editing): Retrieves patient data using PatientService and populates form controls.
+frmAppointmentScheduling.cs:
+cmbDoctor_SelectedIndexChanged(...): When a doctor is selected, possibly load their schedule.
+monthCalendar_DateChanged(...): When a date is selected, load appointments for that date/doctor.
+btnBookAppointment_Click(...):
+Gather PatientID, DoctorID, Date/Time, Reason.
+Create Appointment entity.
+Instantiate AppointmentService.
+Call appointmentService.ScheduleAppointment(newAppointment).
+Show message and refresh schedule view.
+(Event handlers for button clicks, data grid interactions, combo box changes, etc., in other forms, always interacting with the corresponding BLL service classes)
+IV. Key Considerations
+
+Error Handling: Implement robust try-catch blocks, especially around database calls (DAL) and business logic (BLL). Log errors effectively. Show user-friendly messages on the UI.
+Security:
+SQL Injection: Use Parameterized Queries or Stored Procedures exclusively in your DAL. Never concatenate user input directly into SQL strings.
+Password Storage: Hash passwords securely (e.g., using bcrypt) before storing them. Never store plain text passwords.
+Authorization: Check user roles/permissions (obtained after login) before allowing access to certain forms or performing sensitive actions (use the UserService or similar).
+Configuration: Store the database connection string securely in App.config (consider encrypting configuration sections for production).
+User Experience (UX): Keep forms clean, provide feedback to the user (loading indicators, success/error messages), and ensure intuitive navigation.
+Data Validation: Perform validation at multiple levels:
+UI: Basic checks (required fields).
+BLL: Business rule validation (e.g., appointment time slots, data consistency).
+Database: Constraints (NOT NULL, UNIQUE, FOREIGN KEY).
+Concurrency: Consider what happens if two users try to modify the same record (e.g., book the same appointment slot) simultaneously. Implement concurrency control mechanisms if necessary (e.g., timestamp/rowversion checks).
+Reporting: You might need separate forms or controls (like ReportViewer) to display reports generated from database queries.
