@@ -16,6 +16,7 @@ HMS-C#-An-Gr is a Hospital Management System built using C#. It provides functio
 - SQL Server (if the project uses a database)
 
 ## Setup Instructions
+#
 1. Clone the repository:
    ```bash
    git clone <repository-url>
